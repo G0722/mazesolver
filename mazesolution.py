@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import heapq
+import time
 
 class Node:
     """
@@ -137,16 +138,14 @@ def astar(maze, start, end):
 
 
 def draw_path(maze, path, thickness):
+    path_image = np.zeros((maze.shape[0],maze.shape[1],3), dtype=maze.dtype)
     for p in path:
         if p[0] < thickness or p[0] > len(maze)-1 - thickness or p[1] < thickness or p[1] > len(maze[0])-1 - thickness:
             continue
-        for i in range(thickness+1):
-            maze[p[0]][p[1]-i] = 120
-            maze[p[0]][p[1]+i] = 120
-            maze[p[0]-i][p[1]] = 120
-            maze[p[0]+i][p[1]] = 120
-            maze[p[0]+i][p[1]+i] = 120
-            maze[p[0]-i][p[1]-i] = 120
+        for i in range(p[0]-thickness, p[0]+thickness+1):
+            for j in range(p[1]-thickness, p[1]+thickness+1):
+                path_image[i][j] = [0,0,255]
+    return path_image
 
 def find_start_end(maze):
     # search the very edge (first/last row and first/last col) to locate start/end positions
@@ -199,13 +198,30 @@ def find_start_end(maze):
 
 # whole solution process.
 def solve_maze(image_path):
-    image = cv2.imread(image_path, 0)               # obtain the image from the file path
-    thn = thin_maze_image(image)                    # thin the maze image
-    cv2.imwrite("docs/images/ZS_thinned_filled_veryhardmaze.png", thn)
-    start_end, thickness = find_start_end(thn)      # find start and end points of maze
-    print(f"start: {start_end[0]}, end: {start_end[1]}")
-    path = astar(thn, start_end[0], start_end[1])   # find solution path using A-star algorithm
-    draw_path(image, path, thickness//2)            # draw the path in red on the original maze
-    cv2.imwrite('docs/images/ZS_solved_veryhardmaze.png', image)
-
-solve_maze('docs/images/veryhardmaze.png')
+    begin = time.time()
+    image = cv2.imread(image_path, 0)                       # obtain the image from the file path
+    thn = thin_maze_image(image)                            # thin the maze image
+    start_end, thickness = find_start_end(thn)              # find start and end points of maze
+    path = astar(thn, start_end[0], start_end[1])           # find solution path using A-star algorithm
+    path_image = draw_path(image, path, thickness//2)       # draw the path in red on the original maze
+    solved_path = ''
+    for c in image_path:
+        if c == '.':
+            break
+        solved_path += c
+    solved_path += '_solved.png'
+    #cv2.imwrite(solved_path, image)
+    end = time.time()
+    elapsed = int(end-begin)
+    print(f"Maze solved in {elapsed // 60}min {elapsed % 60}sec.")
+    maze_overlay = np.zeros((image.shape[0],image.shape[1],3), dtype=image.dtype)
+    for i in range(len(image)):
+        for j in range(len(image[i])):
+            value = image[i][j]
+            maze_overlay[i][j] = [value, value, value]
+    for i in range(len(maze_overlay)):
+        for j in range(len(maze_overlay[i])):
+            if(path_image[i][j][2] == 255 and maze_overlay[i][j][1] == 255):
+                maze_overlay[i][j] = path_image[i][j]
+    cv2.imwrite(solved_path,maze_overlay)
+    return elapsed
