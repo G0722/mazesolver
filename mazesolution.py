@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import heapq
 
 class Node:
     """
@@ -20,6 +21,13 @@ class Node:
     def __repr__(self):
       return f"{self.position} - g: {self.g} h: {self.h} f: {self.f}"
 
+    # defining less than for purposes of heap queue
+    def __lt__(self, other):
+      return self.f < other.f
+
+    # defining greater than for purposes of heap queue
+    def __gt__(self, other):
+      return self.f > other.f
 
 def thin_maze_image(image):
     # convert maze image into 1px-wide skeleton using the Zhang-Suen thinning algorithm
@@ -47,7 +55,13 @@ def thin_maze_image(image):
     return thn
 
 def astar(maze, start, end):
-    """Returns a list of tuples as a path from the given start to the given end in the given maze"""
+    """
+    Returns a list of tuples as a path from the given start to the given end in the given maze
+    :param maze:
+    :param start:
+    :param end:
+    :return:
+    """
 
     # Create start and end node
     start_node = Node(None, start)
@@ -59,24 +73,18 @@ def astar(maze, start, end):
     open_list = []
     closed_list = []
 
-    # Add the start node
-    open_list.append(start_node)
+    # Heapify the open_list and Add the start node
+    heapq.heapify(open_list)
+    heapq.heappush(open_list, start_node)
+
+    # what squares do we search
+    adjacent_squares = ((0, -1), (0, 1), (-1, 0), (1, 0),)
 
     # Loop until you find the end
-    iters = 0
     while len(open_list) > 0:
-        print(f"Iteration #{iters}")
-        iters += 1
-        # Get the current node
-        current_node = open_list[0]
-        current_index = 0
-        for index, item in enumerate(open_list):
-            if item.f < current_node.f:
-                current_node = item
-                current_index = index
 
-        # Pop current off open list, add to closed list
-        open_list.pop(current_index)
+        # Get the current node
+        current_node = heapq.heappop(open_list)
         closed_list.append(current_node)
 
         # Found the goal
@@ -90,7 +98,7 @@ def astar(maze, start, end):
 
         # Generate children
         children = []
-        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]: # Adjacent squares
+        for new_position in adjacent_squares: # Adjacent squares
 
             # Get node position
             node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
@@ -100,7 +108,7 @@ def astar(maze, start, end):
                 continue
 
             # Make sure walkable terrain
-            if maze[node_position[0]][node_position[1]] != 0:
+            if maze[node_position[0]][node_position[1]] == 0:
                 continue
 
             # Create new node
@@ -111,11 +119,9 @@ def astar(maze, start, end):
 
         # Loop through children
         for child in children:
-
             # Child is on the closed list
-            for closed_child in closed_list:
-                if child == closed_child:
-                    continue
+            if len([closed_child for closed_child in closed_list if closed_child == child]) > 0:
+                continue
 
             # Create the f, g, and h values
             child.g = current_node.g + 1
@@ -123,16 +129,24 @@ def astar(maze, start, end):
             child.f = child.g + child.h
 
             # Child is already in the open list
-            for open_node in open_list:
-                if child == open_node and child.g > open_node.g:
-                    continue
+            if len([open_node for open_node in open_list if child.position == open_node.position and child.g > open_node.g]) > 0:
+                continue
 
             # Add the child to the open list
-            open_list.append(child)
+            heapq.heappush(open_list, child)
 
-def draw_path(maze, path):
+
+def draw_path(maze, path, thickness):
     for p in path:
-        maze[p[0]][p[1]] = (255,0,0)
+        if p[0] < thickness or p[0] > len(maze)-1 - thickness or p[1] < thickness or p[1] > len(maze[0])-1 - thickness:
+            continue
+        for i in range(thickness+1):
+            maze[p[0]][p[1]-i] = 120
+            maze[p[0]][p[1]+i] = 120
+            maze[p[0]-i][p[1]] = 120
+            maze[p[0]+i][p[1]] = 120
+            maze[p[0]+i][p[1]+i] = 120
+            maze[p[0]-i][p[1]-i] = 120
 
 def find_start_end(maze):
     # search the very edge (first/last row and first/last col) to locate start/end positions
@@ -169,6 +183,7 @@ def find_start_end(maze):
 
     # pick correct start/end and fix their positions
     points = []
+    thickness = []
     for key in locations:
         if locations[key]:
             if key == 'top':
@@ -179,18 +194,18 @@ def find_start_end(maze):
                 points.append((locations[key][0], locations[key][1]-lengths[key]//2))
             elif key == 'right':
                 points.append((locations[key][0]-lengths[key]//2, locations[key][1]))
-    return points
+            thickness.append(lengths[key])
+    return points, max(thickness)
 
 # whole solution process.
 def solve_maze(image_path):
     image = cv2.imread(image_path, 0)               # obtain the image from the file path
     thn = thin_maze_image(image)                    # thin the maze image
-    cv2.imwrite("mazeimages/thin_maze.png", thn)
-    start_end = find_start_end(thn)                 # find start and end points of maze
+    cv2.imwrite("docs/images/ZS_thinned_filled_veryhardmaze.png", thn)
+    start_end, thickness = find_start_end(thn)      # find start and end points of maze
     print(f"start: {start_end[0]}, end: {start_end[1]}")
     path = astar(thn, start_end[0], start_end[1])   # find solution path using A-star algorithm
-    print(path)
-    # draw_path(thn, path)                            # draw the path in red on the maze
-    # cv2.imwrite('docs/images/ZS_solved_veryhardmaze.png', thn)
+    draw_path(image, path, thickness//2)            # draw the path in red on the original maze
+    cv2.imwrite('docs/images/ZS_solved_veryhardmaze.png', image)
 
-solve_maze('mazeimages/maze.png')
+solve_maze('docs/images/veryhardmaze.png')
