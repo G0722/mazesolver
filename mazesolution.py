@@ -212,7 +212,7 @@ def solve_maze(image_path):
     solved_path += '_solved.png'
     #cv2.imwrite(solved_path, image)
     end = time.time()
-    elapsed = int(end-begin)
+    elapsed = round(end-begin,2)
     print(f"Maze solved in {elapsed // 60}min {elapsed % 60}sec.")
     maze_overlay = np.zeros((image.shape[0],image.shape[1],3), dtype=image.dtype)
     for i in range(len(image)):
