@@ -1,6 +1,7 @@
 from pywebio.input import *
 from pywebio.output import *
 from pywebio import start_server, config
+from pywebio.session import run_js
 import mazegenerate, mazesolution
 
 @config(theme='dark')
@@ -9,31 +10,35 @@ def app():
         clear()
         maze_info = maze_info_page()
         put_grid([
-            [span(put_markdown('# CS4480 Maze Solver Project'), col=3)],
-            [put_scope('maze'), put_scope('actions') ,put_scope('solution')],
-        ], cell_widths='40% 10% 50%')
+            [span(put_markdown('# CS4480 AI Maze Solver Project'), col=3)],
+            [put_scope('maze'), put_scope('blank'), put_scope('solution')],
+        ], cell_widths='45% 10% 45%')
         display_maze_page(maze_info)
-        with use_scope('actions'):
-            act = actions(buttons=['Solve', 'Restart', 'Exit'])
-            if act == 'Solve':
-                solve_maze()
-            elif act == 'Restart':
-                continue
-            elif act == 'Exit':
-                break
-            clear()
-            act = actions(buttons=['Restart', 'Exit'])
-            if act == 'Restart':
-                continue
-            elif act == 'Exit':
-                break
+        act = actions(buttons=[
+            {'label': 'Solve', 'value': 'Solve', 'color': 'success'},
+            {'label': 'Restart', 'value': 'Restart', 'color': 'warning'},
+            {'label': 'Exit', 'value': 'Exit', 'color': 'danger'}
+        ])
+        if act == 'Solve':
+            solve_maze()
+        elif act == 'Restart':
+            continue
+        elif act == 'Exit':
+            break
+        act = actions(buttons=[
+            {'label': 'Restart', 'value': 'Restart', 'color': 'warning'},
+            {'label': 'Exit', 'value': 'Exit', 'color': 'danger'}
+        ])
+        if act == 'Exit':
+            break
+
 
 def solve_maze():
     time_elapsed = mazesolution.solve_maze('mazeimages/maze.png')
     with use_scope('solution'):
         put_markdown("### Maze solution:")
         put_image(open('mazeimages/maze_solved.png', 'rb').read())
-        put_text(f"Maze solved in {time_elapsed//60} min {time_elapsed%60} sec(s).")
+        put_text(f"Maze solved in {int(time_elapsed//60)} min {time_elapsed%60} sec(s).")
 
 def check_dims(n):
     return "Exceeded max parameters" if n > 40 else None
@@ -52,8 +57,7 @@ def maze_info_page():
 
 def display_maze_page(maze_info):
     with use_scope('maze'):
-        put_markdown("### Maze:")
-        put_text(f"A {maze_info['difficulty']} maze of size ({maze_info['width']},{maze_info['height']}):")
+        put_markdown(f"### A {maze_info['difficulty']} maze of size ({maze_info['width']},{maze_info['height']}):")
         put_image(open('mazeimages/maze.png', 'rb').read())
 
 if __name__ == '__main__':
