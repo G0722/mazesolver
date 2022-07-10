@@ -52,14 +52,13 @@ def solve_maze():
         put_image(open('mazeimages/maze_solved.png', 'rb').read())
         put_text(f"Maze solved in {int(time_elapsed//60)} min {time_elapsed%60} sec(s).")
 
-def check_dims(n):
-    return "Exceeded max parameters" if n > 50 else None
-
 def maze_info_page():
+    limit = 50
+    check_dims = lambda n: "Exceeded max parameters" if n > limit else None
     maze_info = input_group('Maze Parameters', [
                     select(label='Select Difficulty', options=['Random','Hard'], value='Random', name='difficulty'),
-                    input(label='width (max 50):', value='10', type=NUMBER, name='width', validate=check_dims),
-                    input(label='height (max 50):', value='10', type=NUMBER, name='height', validate=check_dims),
+                    input(label=f'width (max {limit}):', value='10', type=NUMBER, name='width', validate=check_dims),
+                    input(label=f'height (max {limit}):', value='10', type=NUMBER, name='height', validate=check_dims),
                     ])
     with put_loading(shape='grow', color='light'):
         if maze_info['difficulty'] == 'Hard':
