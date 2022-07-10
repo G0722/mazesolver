@@ -1,3 +1,6 @@
+# Credit for this: Nicholas Swift
+# as found at https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
+
 import cv2
 import numpy as np
 import heapq
@@ -34,13 +37,13 @@ def thin_maze_image(image):
     # convert maze image into 1px-wide skeleton using the Zhang-Suen thinning algorithm
     thn = cv2.ximgproc.thinning(image, None, thinningType=cv2.ximgproc.THINNING_ZHANGSUEN)
 
-    # algorithm to find holes in skeleton and fill them with white
+    # algorithm to find holes in skeleton image
     # holes typically happen at junctions/turns
     holes = []
     for i in range(1,len(thn)-1):
         for j in range(1,len(thn[i])-1):
             if (thn[i][j] == 0):
-                # checks conditions of holes. if it's a hole, record index to fill later.
+                # checks conditions of holes. if current position a hole, record the index.
                 if (    (thn[i+1][j] and thn[i][j+1] and not thn[i+1][j+1])
                     or  (thn[i][j-1] and thn[i+1][j] and not thn[i+1][j-1])
                     or  (thn[i-1][j] and thn[i][j+1] and not thn[i-1][j+1])
@@ -51,8 +54,7 @@ def thin_maze_image(image):
         i, j = h[0], h[1]
         thn[i][j] = 255
 
-    # save thinned and filled image
-    # cv2.imwrite(f'{folder}/thinned_{name}', thn)
+    # return thinned and filled image
     return thn
 
 def astar(maze, start, end):
