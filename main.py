@@ -44,10 +44,11 @@ def upload_maze_page():
     open('mazeimages/maze.png', 'wb').write(image)
     return 'upload'
 
+@use_scope('solution')
 def solve_maze():
-    time_elapsed = mazesolution.solve_maze('mazeimages/maze.png')
-    with use_scope('solution'):
-        put_markdown("### Maze solution:")
+    put_markdown("### Maze solution:")
+    with put_loading(shape='grow', color='light'):
+        time_elapsed = mazesolution.solve_maze('mazeimages/maze.png')
         put_image(open('mazeimages/maze_solved.png', 'rb').read())
         put_text(f"Maze solved in {int(time_elapsed//60)} min {time_elapsed%60} sec(s).")
 
@@ -60,11 +61,12 @@ def maze_info_page():
                     input(label='width (max 50):', value='10', type=NUMBER, name='width', validate=check_dims),
                     input(label='height (max 50):', value='10', type=NUMBER, name='height', validate=check_dims),
                     ])
-    if maze_info['difficulty'] == 'Hard':
-        mazegenerate.generate_hard_maze(maze_info['width'], maze_info['height'])
-    elif maze_info['difficulty'] == 'Random':
-        mazegenerate.generate_random_maze(maze_info['width'], maze_info['height'])
-    return maze_info
+    with put_loading(shape='grow', color='light'):
+        if maze_info['difficulty'] == 'Hard':
+            mazegenerate.generate_hard_maze(maze_info['width'], maze_info['height'])
+        elif maze_info['difficulty'] == 'Random':
+            mazegenerate.generate_random_maze(maze_info['width'], maze_info['height'])
+        return maze_info
 
 @use_scope('maze')
 def display_maze_page(maze_info):
