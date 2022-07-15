@@ -1,5 +1,9 @@
-# Credit for this: Nicholas Swift
+# Credit for A-star and Node implementation: Nicholas Swift
 # as found at https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
+
+# In addition, credit to Ryan Collingwood
+# for fixing minor errors in original implementation
+# gist found at https://gist.github.com/ryancollingwood/32446307e976a11a1185a5394d6657bc
 
 import cv2
 import numpy as np
@@ -77,13 +81,16 @@ def astar(maze, start, end):
     closed_list = []
 
     # Heapify the open_list and Add the start node
+    # open_list is now a min heap
     heapq.heapify(open_list)
     heapq.heappush(open_list, start_node)
 
     # what squares do we search
+    # only up, down, left, and right relatively
     adjacent_squares = ((0, -1), (0, 1), (-1, 0), (1, 0),)
 
     # Loop until you find the end
+    # or until there are no more unvisited nodes
     while len(open_list) > 0:
 
         # Get the current node
@@ -111,13 +118,15 @@ def astar(maze, start, end):
                 continue
 
             # Make sure walkable terrain
+            # Black (0) unwalkable. White (255) is walkable
             if maze[node_position[0]][node_position[1]] == 0:
                 continue
 
             # Create new node
+            # set current node as new_node's parent
             new_node = Node(current_node, node_position)
 
-            # Append
+            # Append to children
             children.append(new_node)
 
         # Loop through children
@@ -129,7 +138,7 @@ def astar(maze, start, end):
             # Create the f, g, and h values
             child.g = current_node.g + 1
             child.h = ((child.position[0] - end_node.position[0]) ** 2) + ((child.position[1] - end_node.position[1]) ** 2)
-            child.f = child.g + child.h
+            child.f = child.g + child.h     # definition: f = g+h
 
             # Child is already in the open list
             if len([open_node for open_node in open_list if child.position == open_node.position and child.g > open_node.g]) > 0:
@@ -138,12 +147,15 @@ def astar(maze, start, end):
             # Add the child to the open list
             heapq.heappush(open_list, child)
 
-
+# Returns image array of solution path
 def draw_path(maze, path, thickness):
     path_image = np.zeros((maze.shape[0],maze.shape[1],3), dtype=maze.dtype)
+    # iterate through all coordinates
     for p in path:
+        # make sure pixels and all neighbors in range
         if p[0] < thickness or p[0] > len(maze)-1 - thickness or p[1] < thickness or p[1] > len(maze[0])-1 - thickness:
             continue
+        # set all neighbor pixels based on thickness to red
         for i in range(p[0]-thickness, p[0]+thickness+1):
             for j in range(p[1]-thickness, p[1]+thickness+1):
                 path_image[i][j] = [0,0,255]
@@ -200,7 +212,7 @@ def find_start_end(maze):
 
 # whole solution process.
 def solve_maze(image_path):
-    begin = time.time()
+    begin = time.time()                                     # start the clock
     image = cv2.imread(image_path, 0)                       # obtain the image from the file path
     thn = thin_maze_image(image)                            # thin the maze image
     start_end, thickness = find_start_end(thn)              # find start and end points of maze
@@ -212,10 +224,11 @@ def solve_maze(image_path):
             break
         solved_path += c
     solved_path += '_solved.png'
-    #cv2.imwrite(solved_path, image)
-    end = time.time()
-    elapsed = round(end-begin,2)
-    print(f"Maze solved in {elapsed // 60}min {elapsed % 60}sec.")
+    end = time.time()                                       # stop the clock. solving done.
+    elapsed = round(end-begin,2)                            # get the time elapsed
+
+    # overlay path image array onto original maze image
+    # path image is behind original maze
     maze_overlay = np.zeros((image.shape[0],image.shape[1],3), dtype=image.dtype)
     for i in range(len(image)):
         for j in range(len(image[i])):
@@ -225,5 +238,6 @@ def solve_maze(image_path):
         for j in range(len(maze_overlay[i])):
             if(path_image[i][j][2] == 255 and maze_overlay[i][j][1] == 255):
                 maze_overlay[i][j] = path_image[i][j]
+    # maze image overlay with solution path saved into memory
     cv2.imwrite(solved_path,maze_overlay)
     return elapsed
